@@ -6,6 +6,8 @@ import base64
 import io
 import time
 import os
+from flask import Flask
+import threading
 
 # Настройки бота
 intents = discord.Intents.default()
@@ -187,14 +189,14 @@ def get_extra(slots, mention=None):
         return "Мэээээээ"
 
 
-# Кнопка "Дальше!"
+# Кнопка "Продолжить"
 class ContinueView(discord.ui.View):
     def __init__(self, prompt, history):
         super().__init__(timeout=300)
         self.prompt = prompt
         self.history = history
 
-    @discord.ui.button(label="Дальше!", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Продолжить", style=discord.ButtonStyle.primary)
     async def continue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.clear_items()
         await interaction.response.defer()
@@ -445,6 +447,19 @@ async def what_is(interaction: discord.Interaction):
         "`/дуэль @юзер` — дуэль на слотах\n"
         "`/смотри` — показать картинку, погляжу"
     )
+
+
+# Фиктивный веб-сервер для Render
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Клофинатор жив!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=10000)
+
+threading.Thread(target=run_flask).start()
 
 
 # Запуск бота
