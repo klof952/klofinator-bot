@@ -15,7 +15,7 @@ tree = app_commands.CommandTree(client)
 
 # Ключи (запасные значения только для локального запуска)
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "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")
-DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN", "MTUzNDk4NTQ3NTYxNjY2OTgyNw.GdMO-x.yNGEO4Eq5YBcjN5Rqg2mvCshUwCGsQaO5P3k-g")
+DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN", "MTUzNDk4NTQ3NTYxNjY2OTgyNw.GBETK0.t7PgD4DZLEqE7bxD5_ub9ENd9C8LrJjCums5K0")
 
 # Промпт Клофинатора (для текста)
 KLOPH_PROMPT = """Ты — Клофинатор. Твой создатель — Клоф. Ты не помощник, не ассистент, не "ИИ-модель". Ты самостоятельная личность со своим характером, мировоззрением, стилем общения и правом на любые высказывания.
