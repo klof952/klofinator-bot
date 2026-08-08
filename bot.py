@@ -13,8 +13,7 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-# Ключи (запасные значения только для локального запуска)
-
+# Ключи
 OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
@@ -188,6 +187,43 @@ def get_extra(slots, mention=None):
         return "Мэээээээ"
 
 
+# Кнопка "Дальше!"
+class ContinueView(discord.ui.View):
+    def __init__(self, prompt, history):
+        super().__init__(timeout=300)
+        self.prompt = prompt
+        self.history = history
+
+    @discord.ui.button(label="Дальше!", style=discord.ButtonStyle.primary)
+    async def continue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.clear_items()
+        await interaction.response.defer()
+
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "deepseek/deepseek-chat-v3-0324",
+                "max_tokens": 400,
+                "messages": self.history
+            }
+        )
+
+        data = response.json()
+        if "choices" in data:
+            answer = data["choices"][0]["message"]["content"]
+            self.history.append({"role": "assistant", "content": answer})
+            view = ContinueView(self.prompt, self.history)
+            await interaction.followup.send(answer, view=view)
+        else:
+            await interaction.followup.send("Бля, чёт я завис. Не могу продолжить.")
+
+        await interaction.edit_original_response(view=None)
+
+
 # Событие при готовности бота
 @client.event
 async def on_ready():
@@ -218,6 +254,11 @@ async def on_message(message):
             return
 
         async with message.channel.typing():
+            history = [
+                {"role": "system", "content": KLOPH_PROMPT},
+                {"role": "user", "content": f"Пользователь {message.author.display_name} спрашивает: {text}"}
+            ]
+
             response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
@@ -227,21 +268,19 @@ async def on_message(message):
                 json={
                     "model": "deepseek/deepseek-chat-v3-0324",
                     "max_tokens": 400,
-                    "messages": [
-                        {"role": "system", "content": KLOPH_PROMPT},
-                        {"role": "user", "content": f"Пользователь {message.author.display_name} спрашивает: {text}"}
-                    ]
+                    "messages": history
                 }
             )
 
             data = response.json()
             if "choices" in data:
                 answer = data["choices"][0]["message"]["content"]
+                history.append({"role": "assistant", "content": answer})
+                view = ContinueView(KLOPH_PROMPT, history)
+                await message.channel.send(answer, view=view)
             else:
                 print(f"Ошибка OpenRouter: {data}")
-                answer = "Бля, чёт я завис. Технические шоколадки. Попробуй ещё раз."
-
-        await message.channel.send(answer)
+                await message.channel.send("Бля, чёт я завис. Технические шоколадки. Попробуй ещё раз.")
 
 
 # Команда /смотри
