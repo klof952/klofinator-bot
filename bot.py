@@ -259,10 +259,17 @@ async def on_message(message):
             await message.channel.send("Ну ты пинганул меня, и чё? Скажи чё-нибудь, я не телепат.")
             return
 
-        # Память по пользователю
+        # Строим историю
         history = [{"role": "system", "content": KLOPH_PROMPT}]
 
-        if user_id in client.last_messages:
+        # Проверяем, ответ ли это на сообщение бота
+        if message.reference and message.reference.resolved:
+            replied_msg = message.reference.resolved
+            if replied_msg.author == client.user:
+                # Контекст из сообщения, на которое ответили
+                history.append({"role": "assistant", "content": f"[Отвечая на своё сообщение: {replied_msg.content}]"})
+        elif user_id in client.last_messages:
+            # Контекст из памяти пользователя
             history.append({"role": "assistant", "content": f"[Предыдущий ответ: {client.last_messages[user_id]}]"})
 
         history.append({"role": "user", "content": f"Пользователь {message.author.display_name} спрашивает: {text}"})
