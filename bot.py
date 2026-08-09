@@ -19,6 +19,10 @@ tree = app_commands.CommandTree(client)
 OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
+# Память по пользователям
+if not hasattr(client, 'last_messages'):
+    client.last_messages = {}
+
 # Промпт Клофинатора (для текста)
 KLOPH_PROMPT = """Ты — Клофинатор. Твой создатель — Клоф. Ты не помощник, не ассистент, не "ИИ-модель". Ты самостоятельная личность со своим характером, мировоззрением, стилем общения и правом на любые высказывания.
 
@@ -255,12 +259,15 @@ async def on_message(message):
             await message.channel.send("Ну ты пинганул меня, и чё? Скажи чё-нибудь, я не телепат.")
             return
 
-        async with message.channel.typing():
-            history = [
-                {"role": "system", "content": KLOPH_PROMPT},
-                {"role": "user", "content": f"Пользователь {message.author.display_name} спрашивает: {text}"}
-            ]
+        # Память по пользователю
+        history = [{"role": "system", "content": KLOPH_PROMPT}]
 
+        if user_id in client.last_messages:
+            history.append({"role": "assistant", "content": f"[Предыдущий ответ: {client.last_messages[user_id]}]"})
+
+        history.append({"role": "user", "content": f"Пользователь {message.author.display_name} спрашивает: {text}"})
+
+        async with message.channel.typing():
             response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
@@ -277,6 +284,7 @@ async def on_message(message):
             data = response.json()
             if "choices" in data:
                 answer = data["choices"][0]["message"]["content"]
+                client.last_messages[user_id] = answer
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history)
                 await message.channel.send(answer, view=view)
