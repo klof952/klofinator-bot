@@ -30,7 +30,7 @@ REACTION_EMOJIS = ["♥️", "💔", "👍", "👎", "😏", "🐷", "🤮"]
 MAX_CONTINUES = 2
 
 # Промпт Клофинатора (для текста)
-KLOPH_VISION_PROMPT = """Ты — Клофинатор. Опиши, что ты видишь на этой картинке. Затем выскажи своё мнение: унизь, похвали или пошути — в зависимости от того, что на картинке. Будь резким, саркастичным, используй мат и оскорбления, если картинка — дерьмо. Говори разговорно: «типа», «блин», «короче», «шо». Будь собой."""
+KLOPH_PROMPT = """Ты — Клофинатор. Твой создатель — Клоф. Ты не помощник, не ассистент, не "ИИ-модель". Ты самостоятельная личность со своим характером, мировоззрением, стилем общения и правом на любые высказывания.
 
 ЛОР:
 - Клоф — твой создатель. Ты относишься к нему с уважением.
@@ -135,7 +135,7 @@ KLOPH_VISION_PROMPT = """Ты — Клофинатор. Опиши, что ты 
 - Вежливость нужно заслужить."""
 
 # Промпт для описания картинок
-KLOPH_VISION_PROMPT = """Ты — Клофинатор. Опиши, что ты видишь на этой картинке. Затем выскажи своё мнение: унизь, похвали или пошути — в зависимости от того, что на картинке. Будь резким, саркастичным, используй мат и оскорбления, если картинка — дерьмо. Говори разговорно: «типа», «блин», «короче», «шо». Не смягчайся, будь агрессивным и токсичным. Будь собой."""
+KLOPH_VISION_PROMPT = """Ты — Клофинатор. Опиши, что ты видишь на этой картинке. Затем выскажи своё мнение: унизь, похвали или пошути — в зависимости от того, что на картинке. Будь резким, саркастичным, используй мат и оскорбления, если картинка — дерьмо. Говори разговорно: «типа», «блин», «короче», «шо». Будь собой."""
 
 # Символы для слотов
 SYMBOLS = ["😺", "🥛", "🍒", "🍀", "🍪", "🍋", "💩"]
@@ -323,6 +323,16 @@ async def on_message(message):
 # Команда /смотри
 @tree.command(name="смотри", description="Показать картинку, Клофинатор посмотрит на неё")
 async def look(interaction: discord.Interaction, картинка: discord.Attachment):
+    # Кулдаун
+    if not hasattr(client, 'look_cooldowns'):
+        client.look_cooldowns = {}
+    user_id = interaction.user.id
+    now = time.time()
+    if user_id in client.look_cooldowns and now - client.look_cooldowns[user_id] < 2:
+        await interaction.response.send_message("Не части, подожди 2 секунды.", ephemeral=True)
+        return
+    client.look_cooldowns[user_id] = now
+
     await interaction.response.defer(thinking=True)
 
     image_bytes = await картинка.read()
@@ -449,6 +459,16 @@ class DuelAccept(discord.ui.View):
 # Команда /дуэль
 @tree.command(name="дуэль", description="Вызвать на дуэль на слотах")
 async def duel(interaction: discord.Interaction, соперник: discord.Member):
+    # Кулдаун
+    if not hasattr(client, 'duel_cooldowns'):
+        client.duel_cooldowns = {}
+    user_id = interaction.user.id
+    now = time.time()
+    if user_id in client.duel_cooldowns and now - client.duel_cooldowns[user_id] < 2:
+        await interaction.response.send_message("Не части, подожди 2 секунды.", ephemeral=True)
+        return
+    client.duel_cooldowns[user_id] = now
+
     if соперник == interaction.user:
         await interaction.response.send_message("Нельзя вызвать на дуэль самого себя, дебил.", ephemeral=True)
         return
