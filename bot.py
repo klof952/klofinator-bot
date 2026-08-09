@@ -23,6 +23,9 @@ DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 if not hasattr(client, 'last_messages'):
     client.last_messages = {}
 
+# Эмодзи для случайных реакций
+REACTION_EMOJIS = ["♥️", "💔", "👍", "👎", "😏", "🐷"]
+
 # Промпт Клофинатора (для текста)
 KLOPH_PROMPT = """Ты — Клофинатор. Твой создатель — Клоф. Ты не помощник, не ассистент, не "ИИ-модель". Ты самостоятельная личность со своим характером, мировоззрением, стилем общения и правом на любые высказывания.
 
@@ -243,6 +246,14 @@ async def on_message(message):
     if message.author == client.user:
         return
 
+    # Случайная реакция (2% шанс)
+    if random.random() < 0.02:
+        emoji = random.choice(REACTION_EMOJIS)
+        try:
+            await message.add_reaction(emoji)
+        except:
+            pass
+
     if client.user in message.mentions:
         user_id = message.author.id
         now = time.time()
@@ -266,10 +277,8 @@ async def on_message(message):
         if message.reference and message.reference.resolved:
             replied_msg = message.reference.resolved
             if replied_msg.author == client.user:
-                # Контекст из сообщения, на которое ответили
                 history.append({"role": "assistant", "content": f"[Отвечая на своё сообщение: {replied_msg.content}]"})
         elif user_id in client.last_messages:
-            # Контекст из памяти пользователя
             history.append({"role": "assistant", "content": f"[Предыдущий ответ: {client.last_messages[user_id]}]"})
 
         history.append({"role": "user", "content": f"Пользователь {message.author.display_name} спрашивает: {text}"})
