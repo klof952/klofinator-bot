@@ -26,6 +26,9 @@ if not hasattr(client, 'last_messages'):
 # Эмодзи для случайных реакций
 REACTION_EMOJIS = ["♥️", "💔", "👍", "👎", "😏", "🐷", "🤮"]
 
+# Счётчик оставшихся запросов и лимит продолжений
+remaining_requests = 200
+MAX_CONTINUES = 2
 
 # Промпт Клофинатора (для текста)
 KLOPH_PROMPT = """Ты — Клофинатор. Твой создатель — Клоф. Ты не помощник, не ассистент, не "ИИ-модель". Ты самостоятельная личность со своим характером, мировоззрением, стилем общения и правом на любые высказывания.
@@ -199,13 +202,24 @@ def get_extra(slots, mention=None):
 
 # Кнопка "Продолжить"
 class ContinueView(discord.ui.View):
-    def __init__(self, prompt, history):
+    def __init__(self, prompt, history, continues_left):
         super().__init__(timeout=300)
         self.prompt = prompt
         self.history = history
+        self.continues_left = continues_left
 
     @discord.ui.button(label="Продолжить", style=discord.ButtonStyle.primary)
     async def continue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        global remaining_requests
+
+        if remaining_requests <= 0:
+            await interaction.response.send_message("Я сегодня устал, приходи завтра.", ephemeral=True)
+            return
+
+        if self.continues_left <= 0:
+            await interaction.response.send_message("Хорош, на сегодня продолжений хватит.", ephemeral=True)
+            return
+
         self.clear_items()
         await interaction.response.defer()
 
@@ -224,11 +238,13 @@ class ContinueView(discord.ui.View):
 
         data = response.json()
         if "choices" in data:
+            remaining_requests -= 1
             answer = data["choices"][0]["message"]["content"]
             self.history.append({"role": "assistant", "content": answer})
-            view = ContinueView(self.prompt, self.history)
+            view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
         else:
+            print(f"Ошибка OpenRouter: {data}")
             await interaction.followup.send("Бля, чёт я завис. Не могу продолжить.")
 
         await interaction.edit_original_response(view=None)
@@ -244,6 +260,8 @@ async def on_ready():
 # Обработка сообщений (пинг = DeepSeek)
 @client.event
 async def on_message(message):
+    global remaining_requests
+
     if message.author == client.user:
         return
 
@@ -258,6 +276,10 @@ async def on_message(message):
     if client.user in message.mentions:
         user_id = message.author.id
         now = time.time()
+
+        if remaining_requests <= 0:
+            await message.channel.send("Я сегодня устал, приходи завтра.")
+            return
 
         if user_id in cooldowns and now - cooldowns[user_id] < 2:
             await message.channel.send(f"{message.author.mention}, успокойся, не части. Подожди 2 секунды.")
@@ -300,10 +322,11 @@ async def on_message(message):
 
             data = response.json()
             if "choices" in data:
+                remaining_requests -= 1
                 answer = data["choices"][0]["message"]["content"]
                 client.last_messages[user_id] = answer
                 history.append({"role": "assistant", "content": answer})
-                view = ContinueView(KLOPH_PROMPT, history)
+                view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.channel.send(answer, view=view)
             else:
                 print(f"Ошибка OpenRouter: {data}")
@@ -313,6 +336,12 @@ async def on_message(message):
 # Команда /смотри
 @tree.command(name="смотри", description="Показать картинку, Клофинатор посмотрит на неё")
 async def look(interaction: discord.Interaction, картинка: discord.Attachment):
+    global remaining_requests
+
+    if remaining_requests <= 0:
+        await interaction.response.send_message("Я сегодня устал, приходи завтра.")
+        return
+
     await interaction.response.defer(thinking=True)
 
     image_bytes = await картинка.read()
@@ -343,6 +372,7 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
 
     data = response.json()
     if "choices" in data:
+        remaining_requests -= 1
         answer = data["choices"][0]["message"]["content"]
     else:
         print(f"Ошибка Gemma: {data}")
