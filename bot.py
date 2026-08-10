@@ -235,8 +235,8 @@ class ContinueView(discord.ui.View):
             self.history.append({"role": "assistant", "content": answer})
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
-        elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
-            await interaction.followup.send("Я сегодня устал, приходи завтра.")
+        elif "error" in data:
+            await interaction.followup.send(f"Ошибка: {data.get('error', {}).get('message', 'Неизвестная')}")
         else:
             print(f"Ошибка OpenRouter: {data}")
             await interaction.followup.send("Бля, чёт я завис. Не могу продолжить.")
@@ -313,8 +313,8 @@ async def on_message(message):
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.channel.send(answer, view=view)
-            elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
-                await message.channel.send("Я сегодня устал, приходи завтра.")
+            elif "error" in data:
+                await message.channel.send(f"Ошибка: {data.get('error', {}).get('message', 'Неизвестная')}")
             else:
                 print(f"Ошибка OpenRouter: {data}")
                 await message.channel.send("Бля, чёт я завис. Технические шоколадки. Попробуй ещё раз.")
@@ -364,8 +364,8 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     data = response.json()
     if "choices" in data:
         answer = data["choices"][0]["message"]["content"]
-    elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
-        answer = "Я сегодня устал, приходи завтра."
+    elif "error" in data:
+        answer = f"Ошибка: {data.get('error', {}).get('message', 'Неизвестная')}"
     else:
         print(f"Ошибка Gemma: {data}")
         answer = "Бля, не могу разглядеть эту херню. Попробуй другую картинку."
