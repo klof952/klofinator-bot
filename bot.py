@@ -8,6 +8,7 @@ import time
 import os
 from flask import Flask
 import threading
+from datetime import datetime, timedelta
 
 # Настройки бота
 intents = discord.Intents.default()
@@ -199,6 +200,16 @@ def get_extra(slots, mention=None):
         return "Мэээээээ"
 
 
+# Функция расчёта времени до сброса (UTC 00:00)
+def get_time_until_reset():
+    now = datetime.utcnow()
+    reset = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    delta = reset - now
+    hours = delta.seconds // 3600
+    minutes = (delta.seconds % 3600) // 60
+    return hours, minutes
+
+
 # Кнопка "Продолжить"
 class ContinueView(discord.ui.View):
     def __init__(self, prompt, history, continues_left):
@@ -314,7 +325,8 @@ async def on_message(message):
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.channel.send(answer, view=view)
             elif "error" in data:
-                await message.channel.send(f"Ошибка: {data.get('error', {}).get('message', 'Неизвестная')}")
+                hours, minutes = get_time_until_reset()
+                await message.channel.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
             else:
                 print(f"Ошибка OpenRouter: {data}")
                 await message.channel.send("Бля, чёт я завис. Технические шоколадки. Попробуй ещё раз.")
@@ -365,7 +377,8 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     if "choices" in data:
         answer = data["choices"][0]["message"]["content"]
     elif "error" in data:
-        answer = f"Ошибка: {data.get('error', {}).get('message', 'Неизвестная')}"
+        hours, minutes = get_time_until_reset()
+        answer = f"Я сегодня устал, приходи через {hours} ч {minutes} мин."
     else:
         print(f"Ошибка Gemma: {data}")
         answer = "Бля, не могу разглядеть эту херню. Попробуй другую картинку."
