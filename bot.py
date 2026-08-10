@@ -247,7 +247,8 @@ class ContinueView(discord.ui.View):
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
         elif "error" in data:
-            await interaction.followup.send(f"Ошибка: {data.get('error', {}).get('message', 'Неизвестная')}")
+            hours, minutes = get_time_until_reset()
+            await interaction.followup.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
         else:
             print(f"Ошибка OpenRouter: {data}")
             await interaction.followup.send("Бля, чёт я завис. Не могу продолжить.")
