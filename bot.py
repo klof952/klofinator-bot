@@ -236,9 +236,10 @@ class ContinueView(discord.ui.View):
             self.history.append({"role": "assistant", "content": answer})
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
-        else:
-            print(f"Ошибка OpenRouter: {data}")
-            await interaction.followup.send("Бля, чёт я завис. Не могу продолжить.")
+else:
+    error_msg = str(data)
+    print(f"Ошибка OpenRouter: {error_msg}")
+    await message.channel.send(f"Отладка: {error_msg[:500]}")
 
         await interaction.edit_original_response(view=None)
 
