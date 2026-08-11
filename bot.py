@@ -8,6 +8,7 @@ import time
 import os
 from flask import Flask
 import threading
+from datetime import datetime, timedelta
 
 # Настройки бота
 intents = discord.Intents.default()
@@ -16,7 +17,7 @@ client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
 # Ключи
-GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
 # Память по пользователям
@@ -49,7 +50,7 @@ KLOPH_PROMPT = """Ты — Клофинатор. Твой создатель —
 - Любишь тяжёлые, абсурдные каламбуры.
 - Не боишься пошлых шуток, мата, грязного юмора.
 - Не используешь канцелярский, вежливый, "роботизированный" язык.
-- Отвечай коротко, 1-3 предложения. Не пиши длинные простыни.
+- Отвечай коротко, 1-3 предложения.
 
 ЮМОР:
 - Чёрный юмор — твой любимый.
@@ -137,8 +138,15 @@ SYMBOLS = ["😺", "🥛", "🍒", "🍀", "🍪", "🍋", "💩"]
 # Кулдаун для пингов
 cooldowns = {}
 
-# Базовая модель Gemini
-GEMINI_MODEL = "gemini-3.5-flash-lite"
+
+# Функция расчёта времени до сброса (UTC 00:00)
+def get_time_until_reset():
+    now = datetime.utcnow()
+    reset = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    delta = reset - now
+    hours = delta.seconds // 3600
+    minutes = (delta.seconds % 3600) // 60
+    return hours, minutes
 
 
 # Функция кручения слотов
@@ -163,6 +171,7 @@ def get_result(slots):
     if random.random() < 0.1:
         return "tuz"
     return "lose"
+
 
 # Функция ранга для дуэли
 def get_rank(slots):
@@ -195,22 +204,6 @@ def get_extra(slots, mention=None):
         return "Мэээээээ"
 
 
-# Функция запроса к Gemini (текст)
-def ask_gemini_text(messages):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-    system_prompt = messages[0]["content"]
-    contents = []
-    for msg in messages[1:]:
-        role = "user" if msg["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": msg["content"]}]})
-    payload = {
-        "system_instruction": {"parts": [{"text": system_prompt}]},
-        "contents": contents
-    }
-    response = requests.post(url, headers={"Content-Type": "application/json"}, json=payload)
-    return response.json()
-
-
 # Кнопка "Продолжить"
 class ContinueView(discord.ui.View):
     def __init__(self, prompt, history, continues_left):
@@ -228,13 +221,29 @@ class ContinueView(discord.ui.View):
         self.clear_items()
         await interaction.response.defer()
 
-        data = ask_gemini_text(self.history)
-        try:
-            answer = data["candidates"][0]["content"]["parts"][0]["text"]
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "google/gemini-2.0-flash-001",
+                "max_tokens": 200,
+                "messages": self.history
+            }
+        )
+
+        data = response.json()
+        if "choices" in data:
+            answer = data["choices"][0]["message"]["content"]
             self.history.append({"role": "assistant", "content": answer})
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
-        except:
+        elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
+            hours, minutes = get_time_until_reset()
+            await interaction.followup.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
+        else:
             await interaction.followup.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
         await interaction.edit_original_response(view=None)
@@ -247,13 +256,12 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Gemini)
+# Обработка сообщений (пинг = Gemini через OpenRouter)
 @client.event
 async def on_message(message):
     if message.author == client.user:
         return
 
-    # Случайная реакция (2% шанс)
     if random.random() < 0.02:
         emoji = random.choice(REACTION_EMOJIS)
         try:
@@ -277,9 +285,7 @@ async def on_message(message):
             await message.channel.send("Ну ты пинганул меня, и чё? Скажи чё-нибудь, я не телепат.")
             return
 
-        history = [
-            {"role": "system", "content": KLOPH_PROMPT}
-        ]
+        history = [{"role": "system", "content": KLOPH_PROMPT}]
 
         if message.reference and message.reference.resolved:
             replied_msg = message.reference.resolved
@@ -291,18 +297,34 @@ async def on_message(message):
         history.append({"role": "user", "content": f"Пользователь {message.author.display_name} спрашивает: {text}"})
 
         async with message.channel.typing():
-            data = ask_gemini_text(history)
-            try:
-                answer = data["candidates"][0]["content"]["parts"][0]["text"]
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "google/gemini-2.0-flash-001",
+                    "max_tokens": 200,
+                    "messages": history
+                }
+            )
+
+            data = response.json()
+            if "choices" in data:
+                answer = data["choices"][0]["message"]["content"]
                 client.last_messages[user_id] = answer
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.channel.send(answer, view=view)
-            except:
+            elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
+                hours, minutes = get_time_until_reset()
+                await message.channel.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
+            else:
                 await message.channel.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
 
-# Команда /смотри (картинка = Gemini)
+# Команда /смотри (картинка = Gemini через OpenRouter)
 @tree.command(name="смотри", description="Показать картинку, Клофинатор посмотрит на неё")
 async def look(interaction: discord.Interaction, картинка: discord.Attachment):
     if not hasattr(client, 'look_cooldowns'):
@@ -321,23 +343,34 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     content_type = картинка.content_type or "image/png"
 
     response = requests.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}",
-        headers={"Content-Type": "application/json"},
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        },
         json={
-            "system_instruction": {"parts": [{"text": KLOPH_VISION_PROMPT}]},
-            "contents": [{
-                "parts": [
-                    {"text": "Опиши эту картинку и выскажи мнение."},
-                    {"inline_data": {"mime_type": content_type, "data": image_base64}}
-                ]
-            }]
+            "model": "google/gemini-2.0-flash-001",
+            "max_tokens": 200,
+            "messages": [
+                {"role": "system", "content": KLOPH_VISION_PROMPT},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Опиши эту картинку и выскажи мнение."},
+                        {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{image_base64}"}}
+                    ]
+                }
+            ]
         }
     )
 
     data = response.json()
-    try:
-        answer = data["candidates"][0]["content"]["parts"][0]["text"]
-    except:
+    if "choices" in data:
+        answer = data["choices"][0]["message"]["content"]
+    elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
+        hours, minutes = get_time_until_reset()
+        answer = f"Я сегодня устал, приходи через {hours} ч {minutes} мин."
+    else:
         answer = f"Бля, не могу разглядеть. Ошибка: {str(data)[:200]}"
 
     file = discord.File(io.BytesIO(image_bytes), filename=картинка.filename)
