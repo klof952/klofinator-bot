@@ -138,7 +138,7 @@ SYMBOLS = ["😺", "🥛", "🍒", "🍀", "🍪", "🍋", "💩"]
 cooldowns = {}
 
 # Базовая модель Gemini
-GEMINI_MODEL = "gemini-3-flash-preview"
+GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 
 # Функция кручения слотов
