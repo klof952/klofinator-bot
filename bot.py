@@ -8,7 +8,6 @@ import time
 import os
 from flask import Flask
 import threading
-from datetime import datetime, timedelta
 
 # Настройки бота
 intents = discord.Intents.default()
@@ -236,10 +235,9 @@ class ContinueView(discord.ui.View):
             self.history.append({"role": "assistant", "content": answer})
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
-else:
-    error_msg = str(data)
-    print(f"Ошибка OpenRouter: {error_msg}")
-    await message.channel.send(f"Отладка: {error_msg[:500]}")
+        else:
+            print(f"Ошибка OpenRouter: {data}")
+            await interaction.followup.send("Бля, чёт я завис. Не могу продолжить.")
 
         await interaction.edit_original_response(view=None)
 
@@ -314,8 +312,9 @@ async def on_message(message):
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.channel.send(answer, view=view)
             else:
-                print(f"Ошибка OpenRouter: {data}")
-                await message.channel.send("Бля, чёт я завис. Технические шоколадки. Попробуй ещё раз.")
+                error_msg = str(data)
+                print(f"Ошибка OpenRouter: {error_msg}")
+                await message.channel.send(f"Отладка: {error_msg[:500]}")
 
 
 # Команда /смотри
