@@ -145,6 +145,9 @@ SYMBOLS = ["😺", "🥛", "🍒", "🍀", "🍪", "🍋", "💩"]
 # Кулдаун для пингов
 cooldowns = {}
 
+# Базовая модель Gemini
+GEMINI_MODEL = "gemini-1.5-pro"
+
 
 # Функция кручения слотов
 def spin():
@@ -203,7 +206,7 @@ def get_extra(slots, mention=None):
 
 # Функция запроса к Gemini (текст)
 def ask_gemini_text(messages):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     system_prompt = messages[0]["content"]
     contents = []
     for msg in messages[1:]:
@@ -329,7 +332,7 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     content_type = картинка.content_type or "image/png"
 
     response = requests.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}",
         headers={"Content-Type": "application/json"},
         json={
             "system_instruction": {"parts": [{"text": KLOPH_VISION_PROMPT}]},
