@@ -306,7 +306,7 @@ async def on_message(message):
                 },
                 json={
                     "model": "google/gemma-4-31b-it:free",
-                    "max_tokens": 200,
+                    "max_tokens": 400,
                     "messages": history
                 }
             )
