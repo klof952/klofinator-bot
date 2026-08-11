@@ -16,7 +16,8 @@ client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
 # Ключи
-OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
+GROQ_API_KEY = os.environ["GROQ_API_KEY"]
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
 # Память по пользователям
@@ -217,13 +218,13 @@ class ContinueView(discord.ui.View):
         await interaction.response.defer()
 
         response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
+            "https://api.groq.com/openai/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json"
             },
             json={
-                "model": "deepseek/deepseek-chat-v3-0324",
+                "model": "llama-3.3-70b-versatile",
                 "max_tokens": 400,
                 "messages": self.history
             }
@@ -236,7 +237,7 @@ class ContinueView(discord.ui.View):
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
         else:
-            print(f"Ошибка OpenRouter: {data}")
+            print(f"Ошибка Groq: {data}")
             await interaction.followup.send("Бля, чёт я завис. Не могу продолжить.")
 
         await interaction.edit_original_response(view=None)
@@ -249,7 +250,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = DeepSeek)
+# Обработка сообщений (пинг = Groq)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -292,13 +293,13 @@ async def on_message(message):
 
         async with message.channel.typing():
             response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
+                "https://api.groq.com/openai/v1/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "deepseek/deepseek-chat-v3-0324",
+                    "model": "llama-3.3-70b-versatile",
                     "max_tokens": 400,
                     "messages": history
                 }
@@ -312,12 +313,11 @@ async def on_message(message):
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.channel.send(answer, view=view)
             else:
-                error_msg = str(data)
-                print(f"Ошибка OpenRouter: {error_msg}")
-                await message.channel.send(f"Отладка: {error_msg[:500]}")
+                print(f"Ошибка Groq: {data}")
+                await message.channel.send("Бля, чёт я завис. Технические шоколадки. Попробуй ещё раз.")
 
 
-# Команда /смотри
+# Команда /смотри (картинка = Gemini)
 @tree.command(name="смотри", description="Показать картинку, Клофинатор посмотрит на неё")
 async def look(interaction: discord.Interaction, картинка: discord.Attachment):
     # Кулдаун
@@ -337,32 +337,24 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     content_type = картинка.content_type or "image/png"
 
     response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        },
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
+        headers={"Content-Type": "application/json"},
         json={
-            "model": "google/gemma-3-27b-it",
-            "max_tokens": 500,
-            "messages": [
-                {"role": "system", "content": KLOPH_VISION_PROMPT},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Опиши эту картинку и выскажи мнение."},
-                        {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{image_base64}"}}
-                    ]
-                }
-            ]
+            "system_instruction": {"parts": [{"text": KLOPH_VISION_PROMPT}]},
+            "contents": [{
+                "parts": [
+                    {"text": "Опиши эту картинку и выскажи мнение."},
+                    {"inline_data": {"mime_type": content_type, "data": image_base64}}
+                ]
+            }]
         }
     )
 
     data = response.json()
-    if "choices" in data:
-        answer = data["choices"][0]["message"]["content"]
-    else:
-        print(f"Ошибка Gemma: {data}")
+    try:
+        answer = data["candidates"][0]["content"]["parts"][0]["text"]
+    except:
+        print(f"Ошибка Gemini: {data}")
         answer = "Бля, не могу разглядеть эту херню. Попробуй другую картинку."
 
     file = discord.File(io.BytesIO(image_bytes), filename=картинка.filename)
@@ -454,7 +446,6 @@ class DuelAccept(discord.ui.View):
 # Команда /дуэль
 @tree.command(name="дуэль", description="Вызвать на дуэль на слотах")
 async def duel(interaction: discord.Interaction, соперник: discord.Member):
-    # Кулдаун
     if not hasattr(client, 'duel_cooldowns'):
         client.duel_cooldowns = {}
     user_id = interaction.user.id
@@ -467,7 +458,6 @@ async def duel(interaction: discord.Interaction, соперник: discord.Membe
     if соперник == interaction.user:
         await interaction.response.send_message("Нельзя вызвать на дуэль самого себя, дебил.", ephemeral=True)
         return
-
     if соперник.bot:
         await interaction.response.send_message("Ботов нельзя вызывать на дуэль.", ephemeral=True)
         return
