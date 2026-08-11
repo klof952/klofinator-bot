@@ -235,8 +235,7 @@ class ContinueView(discord.ui.View):
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
         except:
-            print(f"Ошибка Gemini: {data}")
-            await interaction.followup.send("Бля, чёт я завис. Не могу продолжить.")
+            await interaction.followup.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
         await interaction.edit_original_response(view=None)
 
@@ -300,8 +299,7 @@ async def on_message(message):
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.channel.send(answer, view=view)
             except:
-                print(f"Ошибка Gemini: {data}")
-                await message.channel.send("Бля, чёт я завис. Технические шоколадки. Попробуй ещё раз.")
+                await message.channel.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
 
 # Команда /смотри (картинка = Gemini)
@@ -340,9 +338,7 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     try:
         answer = data["candidates"][0]["content"]["parts"][0]["text"]
     except:
-        error_text = str(data)
-        print(f"Ошибка Gemini: {error_text}")
-        answer = f"Отладка: {error_text[:300]}"
+        answer = f"Бля, не могу разглядеть. Ошибка: {str(data)[:200]}"
 
     file = discord.File(io.BytesIO(image_bytes), filename=картинка.filename)
     await interaction.followup.send(answer, file=file)
