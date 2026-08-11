@@ -138,7 +138,8 @@ SYMBOLS = ["😺", "🥛", "🍒", "🍀", "🍪", "🍋", "💩"]
 cooldowns = {}
 
 # Базовая модель Gemini
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3-flash-preview"
+
 
 # Функция кручения слотов
 def spin():
@@ -162,7 +163,6 @@ def get_result(slots):
     if random.random() < 0.1:
         return "tuz"
     return "lose"
-
 
 # Функция ранга для дуэли
 def get_rank(slots):
