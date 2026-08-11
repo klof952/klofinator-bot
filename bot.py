@@ -230,7 +230,7 @@ class ContinueView(discord.ui.View):
             },
             json={
                 "model": "google/gemini-3-flash-preview",
-                "max_tokens": 200,
+                "max_tokens": 400,
                 "messages": self.history
             }
         )
@@ -306,7 +306,7 @@ async def on_message(message):
                 },
                 json={
                     "model": "google/gemini-3-flash-preview",
-                    "max_tokens": 200,
+                    "max_tokens": 400,
                     "messages": history
                 }
             )
