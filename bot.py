@@ -18,6 +18,7 @@ tree = app_commands.CommandTree(client)
 
 # Ключи
 OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
 # Память по пользователям
@@ -228,7 +229,7 @@ class ContinueView(discord.ui.View):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "google/gemini-2.0-flash-001",
+                "model": "google/gemma-4-31b-it:free",
                 "max_tokens": 200,
                 "messages": self.history
             }
@@ -256,7 +257,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Gemini через OpenRouter)
+# Обработка сообщений (пинг = Gemma через OpenRouter)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -304,7 +305,7 @@ async def on_message(message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "google/gemini-2.0-flash-001",
+                    "model": "google/gemma-4-31b-it:free",
                     "max_tokens": 200,
                     "messages": history
                 }
@@ -324,7 +325,7 @@ async def on_message(message):
                 await message.channel.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
 
-# Команда /смотри (картинка = Gemini через OpenRouter)
+# Команда /смотри (картинка = Gemini через Google API)
 @tree.command(name="смотри", description="Показать картинку, Клофинатор посмотрит на неё")
 async def look(interaction: discord.Interaction, картинка: discord.Attachment):
     if not hasattr(client, 'look_cooldowns'):
@@ -343,34 +344,23 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     content_type = картинка.content_type or "image/png"
 
     response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        },
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={GEMINI_API_KEY}",
+        headers={"Content-Type": "application/json"},
         json={
-            "model": "google/gemini-2.0-flash-001",
-            "max_tokens": 200,
-            "messages": [
-                {"role": "system", "content": KLOPH_VISION_PROMPT},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Опиши эту картинку и выскажи мнение."},
-                        {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{image_base64}"}}
-                    ]
-                }
-            ]
+            "system_instruction": {"parts": [{"text": KLOPH_VISION_PROMPT}]},
+            "contents": [{
+                "parts": [
+                    {"text": "Опиши эту картинку и выскажи мнение."},
+                    {"inline_data": {"mime_type": content_type, "data": image_base64}}
+                ]
+            }]
         }
     )
 
     data = response.json()
-    if "choices" in data:
-        answer = data["choices"][0]["message"]["content"]
-    elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
-        hours, minutes = get_time_until_reset()
-        answer = f"Я сегодня устал, приходи через {hours} ч {minutes} мин."
-    else:
+    try:
+        answer = data["candidates"][0]["content"]["parts"][0]["text"]
+    except:
         answer = f"Бля, не могу разглядеть. Ошибка: {str(data)[:200]}"
 
     file = discord.File(io.BytesIO(image_bytes), filename=картинка.filename)
