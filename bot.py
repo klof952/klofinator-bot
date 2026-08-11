@@ -229,7 +229,7 @@ class ContinueView(discord.ui.View):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "google/gemma-4-31b-it:free",
+                "model": "deepseek/deepseek-chat:free",
                 "max_tokens": 200,
                 "messages": self.history
             }
@@ -257,7 +257,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Gemma через OpenRouter)
+# Обработка сообщений (пинг = DeepSeek через OpenRouter)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -305,8 +305,8 @@ async def on_message(message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "google/gemma-4-31b-it:free",
-                    "max_tokens": 400,
+                    "model": "deepseek/deepseek-chat:free",
+                    "max_tokens": 200,
                     "messages": history
                 }
             )
