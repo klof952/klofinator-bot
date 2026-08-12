@@ -486,3 +486,5 @@ threading.Thread(target=run_flask).start()
 
 # Запуск бота
 client.run(DISCORD_TOKEN)
+
+
