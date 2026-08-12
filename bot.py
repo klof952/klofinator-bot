@@ -244,13 +244,14 @@ class ContinueView(discord.ui.View):
             self.history.append({"role": "assistant", "content": answer})
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
-        elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
-            hours, minutes = get_time_until_reset()
-            view = ContinueView(self.prompt, self.history, self.continues_left)
-            await interaction.followup.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.", view=view)
         elif "429" in str(data):
-            view = ContinueView(self.prompt, self.history, self.continues_left)
-            await interaction.followup.send("Погоди, мозги закипели. Повтори ещё раз.", view=view)
+            if "free-models-per-day" in str(data):
+                hours, minutes = get_time_until_reset()
+                view = ContinueView(self.prompt, self.history, self.continues_left)
+                await interaction.followup.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.", view=view)
+            else:
+                view = ContinueView(self.prompt, self.history, self.continues_left)
+                await interaction.followup.send("Погоди, мозги закипели. Повтори ещё раз.", view=view)
         else:
             view = ContinueView(self.prompt, self.history, self.continues_left)
             await interaction.followup.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}", view=view)
@@ -326,11 +327,12 @@ async def on_message(message):
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.reply(answer, view=view)
-            elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
-                hours, minutes = get_time_until_reset()
-                await message.reply(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
             elif "429" in str(data):
-                await message.reply("Погоди, мозги закипели. Повтори ещё раз.")
+                if "free-models-per-day" in str(data):
+                    hours, minutes = get_time_until_reset()
+                    await message.reply(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
+                else:
+                    await message.reply("Погоди, мозги закипели. Повтори ещё раз.")
             else:
                 await message.reply(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
