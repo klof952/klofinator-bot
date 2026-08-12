@@ -8,6 +8,7 @@ import time
 import os
 from flask import Flask
 import threading
+from datetime import datetime, timedelta
 
 # Настройки бота
 intents = discord.Intents.default()
@@ -138,6 +139,16 @@ SYMBOLS = ["😺", "🥛", "🍒", "🍀", "🍪", "🍋", "💩"]
 cooldowns = {}
 
 
+# Функция расчёта времени до сброса (UTC 00:00)
+def get_time_until_reset():
+    now = datetime.utcnow()
+    reset = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    delta = reset - now
+    hours = delta.seconds // 3600
+    minutes = (delta.seconds % 3600) // 60
+    return hours, minutes
+
+
 # Функция кручения слотов
 def spin():
     return [random.choice(SYMBOLS) for _ in range(3)]
@@ -229,6 +240,11 @@ class ContinueView(discord.ui.View):
             self.history.append({"role": "assistant", "content": answer})
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
+        elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
+            hours, minutes = get_time_until_reset()
+            await interaction.followup.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
+        elif "429" in str(data):
+            await interaction.followup.send("Погоди, мозги закипели. Повтори ещё раз.")
         else:
             await interaction.followup.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
@@ -303,6 +319,11 @@ async def on_message(message):
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.channel.send(answer, view=view)
+            elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
+                hours, minutes = get_time_until_reset()
+                await message.channel.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
+            elif "429" in str(data):
+                await message.channel.send("Погоди, мозги закипели. Повтори ещё раз.")
             else:
                 await message.channel.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
