@@ -218,7 +218,7 @@ class ContinueView(discord.ui.View):
             },
             json={
                 "model": "google/gemma-4-26b-a4b-it:free",
-                "max_tokens": 300,
+                "max_tokens": 250,
                 "messages": self.history
             }
         )
@@ -291,7 +291,7 @@ async def on_message(message):
                 },
                 json={
                     "model": "google/gemma-4-26b-a4b-it:free",
-                    "max_tokens": 300,
+                    "max_tokens": 250,
                     "messages": history
                 }
             )
