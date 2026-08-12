@@ -221,7 +221,6 @@ class ContinueView(discord.ui.View):
         self.clear_items()
         await interaction.response.defer()
 
-        # Берём последние слова ответа для точного продолжения
         last_answer = self.history[-1]["content"]
         last_words = last_answer[-100:] if len(last_answer) > 100 else last_answer
         self.history.append({"role": "user", "content": f"Продолжи ровно с этого места: «...{last_words}»"})
@@ -284,7 +283,7 @@ async def on_message(message):
         now = time.time()
 
         if user_id in cooldowns and now - cooldowns[user_id] < 2:
-            await message.channel.send(f"{message.author.mention}, успокойся, не части. Подожди 2 секунды.")
+            await message.reply("Успокойся, не части. Подожди 2 секунды.")
             return
 
         cooldowns[user_id] = now
@@ -292,7 +291,7 @@ async def on_message(message):
         text = message.content.replace(f'<@{client.user.id}>', '').strip()
 
         if not text:
-            await message.channel.send("Ну ты пинганул меня, и чё? Скажи чё-нибудь, я не телепат.")
+            await message.reply("Ну ты пинганул меня, и чё? Скажи чё-нибудь, я не телепат.")
             return
 
         history = [{"role": "system", "content": KLOPH_PROMPT}]
@@ -326,14 +325,14 @@ async def on_message(message):
                 client.last_messages[user_id] = answer
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
-                await message.channel.send(answer, view=view)
+                await message.reply(answer, view=view)
             elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
                 hours, minutes = get_time_until_reset()
-                await message.channel.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
+                await message.reply(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
             elif "429" in str(data):
-                await message.channel.send("Погоди, мозги закипели. Повтори ещё раз.")
+                await message.reply("Погоди, мозги закипели. Повтори ещё раз.")
             else:
-                await message.channel.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
+                await message.reply(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
 
 # Команда /смотри (картинка = Gemini через Google API)
