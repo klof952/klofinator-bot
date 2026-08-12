@@ -221,8 +221,10 @@ class ContinueView(discord.ui.View):
         self.clear_items()
         await interaction.response.defer()
 
-        # Добавляем запрос "продолжи"
-        self.history.append({"role": "user", "content": "Продолжи свой предыдущий ответ ровно с того места, где остановился."})
+        # Берём последние слова ответа для точного продолжения
+        last_answer = self.history[-1]["content"]
+        last_words = last_answer[-100:] if len(last_answer) > 100 else last_answer
+        self.history.append({"role": "user", "content": f"Продолжи ровно с этого места: «...{last_words}»"})
 
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
