@@ -245,11 +245,14 @@ class ContinueView(discord.ui.View):
             await interaction.followup.send(answer, view=view)
         elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
             hours, minutes = get_time_until_reset()
-            await interaction.followup.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
+            view = ContinueView(self.prompt, self.history, self.continues_left)
+            await interaction.followup.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.", view=view)
         elif "429" in str(data):
-            await interaction.followup.send("Погоди, мозги закипели. Повтори ещё раз.")
+            view = ContinueView(self.prompt, self.history, self.continues_left)
+            await interaction.followup.send("Погоди, мозги закипели. Повтори ещё раз.", view=view)
         else:
-            await interaction.followup.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
+            view = ContinueView(self.prompt, self.history, self.continues_left)
+            await interaction.followup.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}", view=view)
 
         await interaction.edit_original_response(view=None)
 
