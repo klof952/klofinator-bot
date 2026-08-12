@@ -221,6 +221,9 @@ class ContinueView(discord.ui.View):
         self.clear_items()
         await interaction.response.defer()
 
+        # Добавляем запрос "продолжи"
+        self.history.append({"role": "user", "content": "Продолжи свой предыдущий ответ ровно с того места, где остановился."})
+
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
@@ -229,7 +232,7 @@ class ContinueView(discord.ui.View):
             },
             json={
                 "model": "google/gemma-4-26b-a4b-it:free",
-                "max_tokens": 250,
+                "max_tokens": 300,
                 "messages": self.history
             }
         )
@@ -307,7 +310,7 @@ async def on_message(message):
                 },
                 json={
                     "model": "google/gemma-4-26b-a4b-it:free",
-                    "max_tokens": 250,
+                    "max_tokens": 300,
                     "messages": history
                 }
             )
