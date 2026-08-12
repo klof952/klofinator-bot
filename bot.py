@@ -20,7 +20,6 @@ tree = app_commands.CommandTree(client)
 OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
-LOG_CHANNEL_ID = 1535012086990770296
 
 # Память по пользователям
 if not hasattr(client, 'last_messages'):
@@ -138,16 +137,6 @@ SYMBOLS = ["😺", "🥛", "🍒", "🍀", "🍪", "🍋", "💩"]
 
 # Кулдаун для пингов
 cooldowns = {}
-
-
-# Функция отправки в лог
-async def send_log(message):
-    try:
-        channel = client.get_channel(LOG_CHANNEL_ID)
-        if channel:
-            await channel.send(message)
-    except:
-        pass
 
 
 # Функция расчёта времени до сброса (UTC 00:00)
@@ -274,7 +263,6 @@ class ContinueView(discord.ui.View):
 async def on_ready():
     await tree.sync()
     print(f'{client.user} готов к работе!')
-    await send_log(f"✅ Бот запущен!")
 
 
 # Обработка сообщений (пинг = Gemma через OpenRouter)
@@ -305,9 +293,6 @@ async def on_message(message):
         if not text:
             await message.reply("Ну ты пинганул меня, и чё? Скажи чё-нибудь, я не телепат.")
             return
-
-        # Логируем запрос
-        await send_log(f"💬 {message.author.display_name} спросил: {text}")
 
         history = [{"role": "system", "content": KLOPH_PROMPT}]
 
@@ -341,17 +326,13 @@ async def on_message(message):
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
                 await message.reply(answer, view=view)
-                await send_log(f"🤖 Ответ для {message.author.display_name}: {answer[:200]}")
             elif "error" in data and "402" in str(data.get("error", {}).get("code", "")):
                 hours, minutes = get_time_until_reset()
                 await message.reply(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
-                await send_log(f"⚠️ Лимит исчерпан. Осталось {hours}ч {minutes}мин.")
             elif "429" in str(data):
                 await message.reply("Погоди, мозги закипели. Повтори ещё раз.")
-                await send_log("⚠️ 429 Rate Limited")
             else:
                 await message.reply(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
-                await send_log(f"❌ Ошибка: {str(data)[:200]}")
 
 
 # Команда /смотри (картинка = Gemini через Google API)
@@ -367,8 +348,6 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     client.look_cooldowns[user_id] = now
 
     await interaction.response.defer(thinking=True)
-
-    await send_log(f"🖼️ {interaction.user.display_name} отправил картинку")
 
     image_bytes = await картинка.read()
     image_base64 = base64.b64encode(image_bytes).decode("utf-8")
@@ -391,10 +370,8 @@ async def look(interaction: discord.Interaction, картинка: discord.Attac
     data = response.json()
     try:
         answer = data["candidates"][0]["content"]["parts"][0]["text"]
-        await send_log(f"🤖 Ответ на картинку: {answer[:200]}")
     except:
         answer = f"Бля, не могу разглядеть. Ошибка: {str(data)[:200]}"
-        await send_log(f"❌ Ошибка картинки: {str(data)[:200]}")
 
     file = discord.File(io.BytesIO(image_bytes), filename=картинка.filename)
     await interaction.followup.send(answer, file=file)
@@ -418,7 +395,6 @@ async def slot(interaction: discord.Interaction):
     else:
         response = f"{result_line}\n{extra}"
 
-    await send_log(f"🎰 {interaction.user.display_name} крутил слоты: {result_line}")
     await interaction.response.send_message(response)
 
 
@@ -464,7 +440,6 @@ class DuelAccept(discord.ui.View):
         else:
             result_text = "🤝 Ничья! Оба красавчики (или оба дебилы)."
 
-        await send_log(f"⚔️ Дуэль: {self.challenger.name} vs {self.target.name} → {result_text}")
         await interaction.response.edit_message(
             content=(
                 f"⚔️ **Дуэль:** {self.challenger.mention} vs {self.target.mention}\n\n"
@@ -523,4 +498,27 @@ async def linux(interaction: discord.Interaction):
 @tree.command(name="что_это", description="???!!??!!")
 async def what_is(interaction: discord.Interaction):
     await interaction.response.send_message(
-        "Я **Клофинатор** — кручу слоты, смотрю картинки, вызываю на дуэли и просто общаюсь за
+        "Я **Клофинатор** — кручу слоты, смотрю картинки, вызываю на дуэли и просто общаюсь за жизнь. "
+        "Пингани меня `@Клофинатор` с любым вопросом — отвечу.\n\n"
+        "**Шо я умею:**\n"
+        "`/однорукий_вирго` — слот-автомат\n"
+        "`/дуэль @юзер` — дуэль на слотах\n"
+        "`/смотри` — показать картинку, погляжу"
+    )
+
+
+# Фиктивный веб-сервер для Render
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Клофинатор жив!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=10000)
+
+threading.Thread(target=run_flask).start()
+
+
+# Запуск бота
+client.run(DISCORD_TOKEN)
