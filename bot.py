@@ -232,7 +232,7 @@ class ContinueView(discord.ui.View):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "nvidia/nemotron-3-super-120b-a12b:free",
+                "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
                 "max_tokens": 300,
                 "messages": self.history
             }
@@ -266,7 +266,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Nemotron Super через OpenRouter)
+# Обработка сообщений (пинг = Nemotron Omni Reasoning)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -314,7 +314,7 @@ async def on_message(message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+                    "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
                     "max_tokens": 300,
                     "messages": history
                 }
