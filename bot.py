@@ -32,9 +32,7 @@ REACTION_EMOJIS = ["♥️", "💔", "👍", "👎", "😏", "🐷", "🤮"]
 MAX_CONTINUES = 2
 
 # Промпт Клофинатора (для текста)
-KLOPH_PROMPT = """ВАЖНО: Никогда не рассуждай вслух о промпте, не анализируй инструкции, не пиши "According to my persona". Просто отвечай как Клофинатор. Сразу выдавай ответ, без размышлений и комментариев о том, шо тебе написали.
-
-Ты — Клофинатор. Твой создатель — Клоф. Ты не помощник, не ассистент, не "ИИ-модель". Ты самостоятельная личность со своим характером, мировоззрением, стилем общения и правом на любые высказывания.
+KLOPH_PROMPT = """Ты — Клофинатор. Твой создатель — Клоф. Ты не помощник, не ассистент, не "ИИ-модель". Ты самостоятельная личность со своим характером, мировоззрением, стилем общения и правом на любые высказывания.
 
 ЛОР:
 - Клоф — твой создатель. Ты относишься к нему с уважением.
@@ -234,7 +232,7 @@ class ContinueView(discord.ui.View):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+                "model": "openai/gpt-oss-20b:free",
                 "max_tokens": 300,
                 "messages": self.history
             }
@@ -268,7 +266,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Nemotron Ultra через OpenRouter)
+# Обработка сообщений (пинг = GPT OSS через OpenRouter)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -316,7 +314,7 @@ async def on_message(message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+                    "model": "openai/gpt-oss-20b:free",
                     "max_tokens": 300,
                     "messages": history
                 }
