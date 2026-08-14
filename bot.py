@@ -232,7 +232,7 @@ class ContinueView(discord.ui.View):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "google/gemma-4-26b-a4b-it:free",
+                "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
                 "max_tokens": 300,
                 "messages": self.history
             }
@@ -266,7 +266,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Gemma через OpenRouter)
+# Обработка сообщений (пинг = Nemotron Ultra через OpenRouter)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -314,7 +314,7 @@ async def on_message(message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "google/gemma-4-26b-a4b-it:free",
+                    "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
                     "max_tokens": 300,
                     "messages": history
                 }
