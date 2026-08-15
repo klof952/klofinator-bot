@@ -232,7 +232,7 @@ class ContinueView(discord.ui.View):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+                "model": "liquid/lfm-2.5-2.6b:free",
                 "max_tokens": 300,
                 "messages": self.history
             }
@@ -240,13 +240,7 @@ class ContinueView(discord.ui.View):
 
         data = response.json()
         if "choices" in data:
-            message = data["choices"][0]["message"]
-            if "reasoning" in message:
-                answer = message.get("content", "")
-            else:
-                full = message["content"]
-                parts = full.split("\n\n")
-                answer = parts[-1] if len(parts) > 1 else full
+            answer = data["choices"][0]["message"]["content"]
             self.history.append({"role": "assistant", "content": answer})
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
@@ -272,7 +266,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Nemotron Nano 30B через OpenRouter)
+# Обработка сообщений (пинг = Liquid LFM через OpenRouter)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -320,7 +314,7 @@ async def on_message(message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+                    "model": "liquid/lfm-2.5-2.6b:free",
                     "max_tokens": 300,
                     "messages": history
                 }
@@ -328,13 +322,7 @@ async def on_message(message):
 
             data = response.json()
             if "choices" in data:
-                message = data["choices"][0]["message"]
-                if "reasoning" in message:
-                    answer = message.get("content", "")
-                else:
-                    full = message["content"]
-                    parts = full.split("\n\n")
-                    answer = parts[-1] if len(parts) > 1 else full
+                answer = data["choices"][0]["message"]["content"]
                 client.last_messages[user_id] = answer
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
