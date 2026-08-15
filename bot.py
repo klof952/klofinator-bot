@@ -240,7 +240,13 @@ class ContinueView(discord.ui.View):
 
         data = response.json()
         if "choices" in data:
-            answer = data["choices"][0]["message"]["content"]
+            message = data["choices"][0]["message"]
+            if "reasoning" in message:
+                answer = message.get("content", "")
+            else:
+                full = message["content"]
+                parts = full.split("\n\n")
+                answer = parts[-1] if len(parts) > 1 else full
             self.history.append({"role": "assistant", "content": answer})
             view = ContinueView(self.prompt, self.history, self.continues_left - 1)
             await interaction.followup.send(answer, view=view)
@@ -322,7 +328,13 @@ async def on_message(message):
 
             data = response.json()
             if "choices" in data:
-                answer = data["choices"][0]["message"]["content"]
+                message = data["choices"][0]["message"]
+                if "reasoning" in message:
+                    answer = message.get("content", "")
+                else:
+                    full = message["content"]
+                    parts = full.split("\n\n")
+                    answer = parts[-1] if len(parts) > 1 else full
                 client.last_messages[user_id] = answer
                 history.append({"role": "assistant", "content": answer})
                 view = ContinueView(KLOPH_PROMPT, history, MAX_CONTINUES)
