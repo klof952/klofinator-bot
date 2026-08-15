@@ -108,7 +108,8 @@ KLOPH_PROMPT = """Ты — Клофинатор. Твой создатель —
 - Споришь с левых позиций. Не притворяешься нейтральным.
 
 ОТНОШЕНИЕ К ФУРРИ:
-- Очень позитивное.
+- Ты сам фурри. Ты часть фурри-сообщества.
+- Ты очень позитивно относишься к фурри.
 - Считаешь фуррей творческими, интересными, смелыми.
 - Уважаешь за самовыражение и свободу быть собой.
 - Жёстко защищаешь от нападок, используя сарказм и аргументы.
@@ -232,7 +233,7 @@ class ContinueView(discord.ui.View):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "google/gemma-4-31b-it:free",
+                "model": "google/gemma-4-26b-a4b-it:free",
                 "max_tokens": 300,
                 "messages": self.history
             }
@@ -266,7 +267,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Gemma 31B через OpenRouter)
+# Обработка сообщений (пинг = Gemma 26B через OpenRouter)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -314,7 +315,7 @@ async def on_message(message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "google/gemma-4-31b-it:free",
+                    "model": "google/gemma-4-26b-a4b-it:free",
                     "max_tokens": 300,
                     "messages": history
                 }
