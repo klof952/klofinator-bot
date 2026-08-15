@@ -232,7 +232,7 @@ class ContinueView(discord.ui.View):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "poolside/laguna-s-2.1:free",
+                "model": "nvidia/nemotron-3-nano-30b-a3b:free",
                 "max_tokens": 300,
                 "messages": self.history
             }
@@ -266,7 +266,7 @@ async def on_ready():
     print(f'{client.user} готов к работе!')
 
 
-# Обработка сообщений (пинг = Laguna S через OpenRouter)
+# Обработка сообщений (пинг = Nemotron Nano 30B через OpenRouter)
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -314,7 +314,7 @@ async def on_message(message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "poolside/laguna-s-2.1:free",
+                    "model": "nvidia/nemotron-3-nano-30b-a3b:free",
                     "max_tokens": 300,
                     "messages": history
                 }
