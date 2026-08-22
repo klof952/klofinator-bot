@@ -252,7 +252,7 @@ class ContinueView(discord.ui.View):
                 await interaction.followup.send(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.", view=view)
             else:
                 view = ContinueView(self.prompt, self.history, self.continues_left)
-                await interaction.followup.send("Погоди, мозги закипели. Повтори ещё раз.", view=view)
+                await interaction.followup.send(f"429: {str(data)[:200]}", view=view)
         else:
             view = ContinueView(self.prompt, self.history, self.continues_left)
             await interaction.followup.send(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}", view=view)
@@ -333,7 +333,7 @@ async def on_message(message):
                     hours, minutes = get_time_until_reset()
                     await message.reply(f"Я сегодня устал, приходи через {hours} ч {minutes} мин.")
                 else:
-                    await message.reply("Погоди, мозги закипели. Повтори ещё раз.")
+                    await message.reply(f"429: {str(data)[:200]}")
             else:
                 await message.reply(f"Бля, чёт я завис. Ошибка: {str(data)[:200]}")
 
